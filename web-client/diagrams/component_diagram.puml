@@ -1,0 +1,46 @@
+@startuml
+
+' Participants
+
+database "MongoDB"
+database "ElasticSearch"
+
+node "Logstash"
+node "Kibana"
+node "web-client"
+node "Elastic APM"
+node "document-server"
+node "ws-server"
+node "document-change-watcher"
+
+' Inter-service interactions
+
+"web-client" --> "ws-server": Establish WS connection to /documents/{documentId}
+
+"ws-server" --> "document-server" : Replicates all get/update requests/responses to/from server
+"ws-server" --> "document-change-watcher" : Subscribes to updates to the document, replicates all updates to client
+"document-change-watcher" --> "ws-server" : Replicates all updates from Mongo
+
+' DB interactions
+"document-change-watcher" --> "MongoDB" : Watches for changes in documents ($changeStream)
+"MongoDB" --> "document-change-watcher" : Sends updates to document elements
+
+"document-server" --> "MongoDB" : CRUD to document elements collection
+
+' Metrics, traces
+"ws-server" --> "Elastic APM" : Sends Metrics/Traces (using APM Java agent)
+"document-server" --> "Elastic APM" : Sends Metrics/Traces (using APM Java agent)
+"document-change-watcher" --> "Elastic APM" : Sends Metrics/Traces (using APM Java agent)
+
+"Elastic APM" --> "ElasticSearch" : Indexes metrics/traces
+
+' Logs
+"ws-server" --> "Logstash" : Writes logs to STDOUT, Docker sends them to Logstash through UDP socket in GELF format
+"document-server" --> "Logstash" : Writes logs to STDOUT, Docker sends them to Logstash through UDP socket in GELF format
+"document-change-watcher" --> "Logstash" : Writes logs to STDOUT, Docker sends them to Logstash through UDP socket in GELF format
+
+"Logstash" --> "ElasticSearch" : Indexes logs
+"Kibana" --> "ElasticSearch" : Read logs/metrics indices
+
+
+@enduml

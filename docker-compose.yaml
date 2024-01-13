@@ -1,0 +1,181 @@
+version: '3.7'
+services:
+
+# APM Agent
+  apm-agent:
+    image: docker.elastic.co/apm/apm-server:7.6.1
+    depends_on:
+      - elasticsearch
+      - kibana
+    cap_add: [ "CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID" ]
+    cap_drop: [ "ALL" ]
+    restart: on-failure
+    networks:
+      net:
+    ports:
+      - "8200:8200"
+    command: >
+      apm-server -e
+        -E apm-server.rum.enabled=true
+        -E setup.kibana.host=kibana:5601
+        -E setup.template.settings.index.number_of_replicas=0
+        -E apm-server.kibana.enabled=true
+        -E apm-server.kibana.host=kibana:5601
+        -E output.elasticsearch.hosts=["elasticsearch:9200"]
+    healthcheck:
+      interval: 10s
+      retries: 12
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:8200/
+
+# Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.6.1
+    depends_on:
+      - elasticsearch
+    restart: on-failure
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - net
+    healthcheck:
+      interval: 10s
+      retries: 20
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:5601/api/status
+
+# Logstash
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.6.1
+    ports:
+      - "12201:12201/udp"
+    environment:
+      LS_JAVA_OPTS: -Xms256m -Xmx256m
+    volumes:
+      - ./logstash/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,Z
+      - ./logstash/pipelines:/usr/share/logstash/pipeline:ro,Z
+    networks:
+      net:
+    restart: on-failure
+
+# MongoDB replica set
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    networks:
+      net:
+    command: ["--replSet", "my-replica-set", "--bind_ip_all", "--port", "30001"]
+    ports:
+      - "30001:30001"
+    healthcheck:
+      test: test $$(echo "rs.initiate({_id:'my-replica-set',members:[{_id:0,host:\"mongo:30001\"}]}).ok || rs.status().ok" | mongo --port 30001 --quiet) -eq 1
+      interval: 10s
+
+# Document change watcher
+  document-change-watcher:
+    ports:
+      - "3100:3100"
+    build:
+      context: document-change-watcher
+      dockerfile: Dockerfile
+    restart: on-failure
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://0.0.0.0:12201"
+        tag: document-change-watcher
+    networks:
+      net:
+    environment:
+      - "MONGO_URL=mongodb://mongo:30001/?replicaSet=my-replica-set"
+      - "MONGO_DB=test"
+      - "MONGO_COLLECTION=documents"
+      - "PORT=3100"
+
+# Document server
+  document-server:
+    ports:
+      - "3104:3104"
+      - "8006:8006"
+    build:
+      context: document-server
+      dockerfile: Dockerfile
+    restart: on-failure
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://0.0.0.0:12201"
+        tag: document-server
+    networks:
+      net:
+    environment:
+      - "MONGO_URL=mongodb://mongo:30001/?replicaSet=my-replica-set"
+      - "MONGO_DB=test"
+      - "MONGO_COLLECTION=documents"
+      - "SERVER_URL=tcp://*:3104"
+
+# WebSocket server
+  ws-server:
+    ports:
+      - "3102:3102"
+      - "8007:8006"
+    build:
+      context: ws-server
+      dockerfile: Dockerfile
+    restart: on-failure
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://0.0.0.0:12201"
+        tag: websocket-server
+    networks:
+      net:
+    environment:
+      - "PORT=3102"
+      - "MIN_POOL_SIZE=5"
+      - "MAX_POOL_SIZE=5"
+      - "DOCUMENT_SERVER_URL=tcp://document-server:3104"
+      - "DOCUMENT_EVENT_SERVER_URL=tcp://document-change-watcher:3100"
+
+# Message broker
+#  message-broker:
+#    ports:
+#      - "3104:3104"
+#      - "3105:3105"
+#    build:
+#      context: message-broker
+#      dockerfile: Dockerfile
+#    restart: on-failure
+#    logging:
+#      driver: gelf
+#      options:
+#        gelf-address: "udp://0.0.0.0:12201"
+#        tag: message-broker
+#    networks:
+#      net:
+#    environment:
+#      - "BACKEND_PORT=3104"
+#      - "FRONTEND_PORT=3105"
+
+# Elasticsearch
+  elasticsearch:
+    image: elasticsearch:7.6.1
+    networks:
+      net:
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - cluster.name=elasticsearch
+      - node.name=elasticsearch
+      - network.host=0.0.0.0
+      - http.host=0.0.0.0
+      - bootstrap.memory_lock=true
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+
+networks:
+  net:

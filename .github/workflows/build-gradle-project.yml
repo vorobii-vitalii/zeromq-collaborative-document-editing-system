@@ -1,6 +1,8 @@
 name: Build Project
 on:
   push:
+env:
+  REGISTRY: ghcr.io
 jobs:
   build-gradle-project:
     runs-on: ubuntu-latest

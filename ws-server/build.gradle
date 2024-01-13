@@ -53,6 +53,7 @@ dependencies {
     // Logging
     implementation("org.slf4j:slf4j-api:2.1.0-alpha0")
     implementation("ch.qos.logback:logback-classic:1.4.14")
+    implementation("co.elastic.logging:logback-ecs-encoder:1.5.0")
 
     // Dependency injection
     implementation("com.google.dagger:dagger:2.50")

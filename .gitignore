@@ -44,5 +44,8 @@ bin/
 document-server/build
 document-change-watcher/build
 ws-server/build
+message-broker/build
 
 .idea/*
+web-client/node_modules
+web-client/build

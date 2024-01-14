@@ -27,8 +27,8 @@ import reactor.netty.resources.LoopResources;
 @Module(includes = {DocumentsServerModule.class, DocumentsEventsReadModule.class})
 public class WebSocketServerModule {
 	private static final String EVENT_LOOP_PREFIX = "event-loop";
-	private static final int IO_THREADS_DEFAULT = 1;
-	private static final int WORKER_THREADS_DEFAULT = 2;
+	protected static final int IO_THREADS_DEFAULT = 1;
+	protected static final int WORKER_THREADS_DEFAULT = 2;
 	private static final boolean DAEMON = true;
 
 	@Provides
@@ -49,15 +49,18 @@ public class WebSocketServerModule {
 
 	@Provides
 	@Singleton
-	HttpServer webSocketServer(Set<WSHandler> wsHandlers) {
+	HttpServer webSocketServer(
+			Set<WSHandler> wsHandlers,
+			@Named("port") int port
+	) {
 		return HttpServer.create()
 				.runOn(LoopResources.create(EVENT_LOOP_PREFIX, getIoThreads(), getWorkerThreads(), DAEMON))
-				.port(getPort())
+				.port(port)
 				.noSSL()
 				.route(routes -> wsHandlers.forEach(handler -> routes.ws(handler.path(), handler.handler())));
 	}
 
-	private ClientDisconnectedEventHandler getClientDisconnectedEventHandler(
+	public ClientDisconnectedEventHandler getClientDisconnectedEventHandler(
 			ConcurrentHashMap<Integer, List<WebsocketOutbound>> subscribersByDocumentId
 	) {
 		return (documentId, wsOutbound) -> subscribersByDocumentId.compute(documentId, (id, v) -> {
@@ -69,7 +72,7 @@ public class WebSocketServerModule {
 		});
 	}
 
-	private ClientConnectedEventHandler getClientConnectedEventHandler(
+	public ClientConnectedEventHandler getClientConnectedEventHandler(
 			ConcurrentHashMap<Integer, List<WebsocketOutbound>> subscribersByDocumentId
 	) {
 		return (documentId, wsOutbound) -> subscribersByDocumentId.compute(documentId, (id, v) -> {
@@ -79,7 +82,9 @@ public class WebSocketServerModule {
 		});
 	}
 
-	private static int getPort() {
+	@Provides
+	@Named("port")
+	public static int getPort() {
 		return Integer.parseInt(System.getenv("PORT"));
 	}
 

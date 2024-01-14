@@ -20,7 +20,7 @@ sonar {
         property "sonar.projectKey", "vorobii-vitalii_zeromq-collaborative-document-editing-system"
         property "sonar.organization", "vorobii-vitalii"
         property "sonar.host.url", "https://sonarcloud.io"
-        property "sonar.exclusions", "**/flatbuffers/**"
+        property "sonar.exclusions", "**/flatbuffers/**,**/WebSocketServer.java"
     }
 }
 

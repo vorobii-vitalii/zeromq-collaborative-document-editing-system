@@ -32,7 +32,6 @@ public class DocumentsServerModule {
 				var socket = context.createSocket(SocketType.REQ);
 				LOGGER.info("Establishing connection to document server, url = {}", getDocumentServerURL());
 				socket.connect(getDocumentServerURL());
-				// TODO: Probably add identity
 				return socket;
 			}
 

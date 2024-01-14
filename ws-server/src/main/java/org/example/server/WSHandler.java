@@ -9,5 +9,5 @@ import reactor.netty.http.websocket.WebsocketOutbound;
 
 public interface WSHandler {
 	String path();
-	BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler();
+	BiFunction<WebsocketInbound, WebsocketOutbound, Publisher<Void>> handler();
 }

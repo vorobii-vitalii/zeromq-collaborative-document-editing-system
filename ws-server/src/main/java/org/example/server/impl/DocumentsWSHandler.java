@@ -47,8 +47,8 @@ public class DocumentsWSHandler implements WSHandler {
 	}
 
 	@Override
-	public BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler() {
-		return (BiFunction<WebsocketInbound, WebsocketOutbound, Publisher<Void>>) (wsInbound, wsOutbound) -> {
+	public BiFunction<WebsocketInbound, WebsocketOutbound, Publisher<Void>> handler() {
+		return (wsInbound, wsOutbound) -> {
 			var httpServerOperations = (HttpServerRequest) wsInbound;
 
 			var documentId = Integer.parseInt(Objects.requireNonNull(httpServerOperations.param(DOCUMENT_ID_PARAM)));

@@ -1,5 +1,5 @@
 import { ResponseHolder } from "../document/editing/response-holder";
-import { Socket } from "./Socket";
+import { Socket, SocketState } from "./Socket";
 import { ByteBuffer } from "flatbuffers";
 
 export interface SocketFactory {
@@ -34,6 +34,17 @@ export class WSSocketFactory implements SocketFactory {
       send: (buffer) => {
         console.log(`Sending message of length ${buffer.length}`);
         waitForConnection(() => socket.send(buffer), 100);
+      },
+      state: () => {
+        switch (socket.readyState) {
+          case socket.CLOSED:
+          case socket.CLOSING:
+            return SocketState.CLOSED;
+          case socket.CONNECTING:
+            return SocketState.CONNECTING;
+          default:
+            return SocketState.OPEN;
+        }
       }
     };
   }

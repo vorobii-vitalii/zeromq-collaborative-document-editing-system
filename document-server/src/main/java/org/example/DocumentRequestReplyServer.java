@@ -27,11 +27,7 @@ public class DocumentRequestReplyServer {
 	}
 
 	private static void startWorkers(List<ZeroMQRequestReplyServer> workers) {
-		workers.forEach(worker -> {
-			var thread = new Thread(worker::startServer);
-			thread.setDaemon(true);
-			thread.start();
-		});
+		workers.forEach(worker -> Thread.startVirtualThread(worker::startServer));
 	}
 
 }

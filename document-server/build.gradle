@@ -4,6 +4,23 @@ plugins {
     id 'java'
     id "io.netifi.flatbuffers" version "1.0.7"
     id "org.sonarqube" version "4.4.1.3373"
+    id "jacoco"
+}
+
+build.dependsOn jacocoTestReport
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+}
+
+sonar {
+    properties {
+        property "sonar.projectKey", "vorobii-vitalii_zeromq-collaborative-document-editing-system"
+        property "sonar.organization", "vorobii-vitalii"
+        property "sonar.host.url", "https://sonarcloud.io"
+    }
 }
 
 group 'org.example'
@@ -26,20 +43,12 @@ flatbuffers {
     language = 'java'
 }
 
-task createFlatBuffers(type: FlatBuffers) {
+tasks.register('createFlatBuffers', FlatBuffers) {
     outputDir = file("src/generated/flatbuffers")
 }
 
 repositories {
     mavenCentral()
-}
-
-sonar {
-    properties {
-        property "sonar.projectKey", "vorobii-vitalii_zeromq-collaborative-document-editing-system"
-        property "sonar.organization", "vorobii-vitalii"
-        property "sonar.host.url", "https://sonarcloud.io"
-    }
 }
 
 dependencies {

@@ -44,9 +44,9 @@ public class DocumentServerModule {
 
 	@Provides
 	@Named("routerSocket")
-	ZMQ.Socket routerSocket(ZContext context) {
+	ZMQ.Socket routerSocket(ZContext context, @Named("serverAddress") String serverAddress) {
 		var socket = context.createSocket(SocketType.ROUTER);
-		boolean isBound = socket.bind(getServerAddress());
+		boolean isBound = socket.bind(serverAddress);
 		LOGGER.info("Created router socket, url = {} bound = {}", getServerAddress(), isBound);
 		return socket;
 	}
@@ -112,7 +112,9 @@ public class DocumentServerModule {
 		return workerSocket;
 	}
 
-	private static String getServerAddress() {
+	@Provides
+	@Named("serverAddress")
+	public String getServerAddress() {
 		return System.getenv("SERVER_URL");
 	}
 
@@ -123,4 +125,3 @@ public class DocumentServerModule {
 	}
 
 }
-

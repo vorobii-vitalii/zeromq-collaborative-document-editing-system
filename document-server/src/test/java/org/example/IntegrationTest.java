@@ -48,6 +48,7 @@ public class IntegrationTest {
 	@NotNull
 	private static String getDocumentServerImageName() {
 		return Optional.ofNullable(System.getProperty("documentServerImage"))
+				.filter(v -> !v.isBlank())
 				.orElse("document-editor/document-server");
 	}
 

@@ -94,6 +94,7 @@ def ENABLE_INTEGRATION_TESTS = "enableIntegrationTests"
 def INTEGRATION_TESTS_ENABLED = "true"
 
 test {
+    systemProperty "documentServerImage", System.getProperty("documentServerImage")
     if (INTEGRATION_TESTS_ENABLED != System.getProperty(ENABLE_INTEGRATION_TESTS)) {
         println "Going to skip integration tests!"
         exclude '**/**Integration**'

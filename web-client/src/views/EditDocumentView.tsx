@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Typography } from "antd";
+import { Alert, Button, Typography } from "antd";
 import { SocketFactory } from "../socket/SocketFactory";
-import { Socket } from "../socket/Socket";
+import { Socket, SocketState } from "../socket/Socket";
 import { Response } from "../document/editing/response";
 import { DocumentElement } from "../document/editing/document-element";
 import { DocumentContext } from "../tree_doc/DocumentContext";
@@ -16,11 +16,22 @@ interface EditDocumentViewProps {
   idGenerator: () => string;
 }
 
+const CONNECTION_TIMEOUT = 5000;
+
 export const EditDocumentView = (props: EditDocumentViewProps) => {
   const { userId, documentId, socketFactory, idGenerator } = props;
   const [socket, setSocket] = useState<Socket>();
   const [previousContent, setPreviousContent] = useState("");
   const [documentContext, setDocumentContext] = useState<DocumentContext>();
+  const [shouldTimeout, setShouldTimeout] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => {
+      if (socket?.state() !== SocketState.OPEN) {
+        setShouldTimeout(true);
+      }
+    }, CONNECTION_TIMEOUT)
+  }, [socket]);
 
   useEffect(() => {
     if (socket) {
@@ -28,34 +39,39 @@ export const EditDocumentView = (props: EditDocumentViewProps) => {
     }
     const context = new DocumentContext(documentId);
     // Send connect to server and handle returned messages...
-    let newSocket = socketFactory.establishConnection(documentId, msg => {
-      const responseType = msg.responseType();
-      if (responseType === Response.DocumentElement) {
-        console.log("Adding new element to context");
-        const docElement : DocumentElement = msg.response(new DocumentElement());
-        context.applyExternalChange(docElement);
-        setPreviousContent(context.getDocumentContent());
-      }
-      else if (responseType === Response.ChangeResponse) {
-        console.log("Change was committed!");
-      }
-      else {
-        console.warn(`Cannot handle response of type = ${responseType}`);
-      }
-    });
-    setDocumentContext(context);
-    console.log(`Fetching document ${documentId}`)
-    const builder = new Builder(0);
-    GetRequest.startGetRequest(builder);
-    GetRequest.addDocumentId(builder, documentId);
-    const getRequestOffset = GetRequest.endGetRequest(builder);
-    RequestHolder.startRequestHolder(builder);
-    RequestHolder.addRequestType(builder, Request.GetRequest);
-    RequestHolder.addRequest(builder, getRequestOffset);
-    const requestHolder = RequestHolder.endRequestHolder(builder);
-    builder.finish(requestHolder);
-    newSocket.send(builder.asUint8Array());
-    setSocket(newSocket);
+    try {
+      let newSocket = socketFactory.establishConnection(documentId, msg => {
+        const responseType = msg.responseType();
+        if (responseType === Response.DocumentElement) {
+          console.log("Adding new element to context");
+          const docElement : DocumentElement = msg.response(new DocumentElement());
+          context.applyExternalChange(docElement);
+          setPreviousContent(context.getDocumentContent());
+        }
+        else if (responseType === Response.ChangeResponse) {
+          console.log("Change was committed!");
+        }
+        else {
+          console.warn(`Cannot handle response of type = ${responseType}`);
+        }
+      });
+      setSocket(newSocket);
+      setDocumentContext(context);
+      console.log(`Fetching document ${documentId}`)
+      const builder = new Builder(0);
+      GetRequest.startGetRequest(builder);
+      GetRequest.addDocumentId(builder, documentId);
+      const getRequestOffset = GetRequest.endGetRequest(builder);
+      RequestHolder.startRequestHolder(builder);
+      RequestHolder.addRequestType(builder, Request.GetRequest);
+      RequestHolder.addRequest(builder, getRequestOffset);
+      const requestHolder = RequestHolder.endRequestHolder(builder);
+      builder.finish(requestHolder);
+      newSocket.send(builder.asUint8Array());
+    }
+    catch (e) {
+      console.warn("Error occurred when connecting to server...");
+    }
   }, [documentContext, documentId, socket, socketFactory]);
 
   const onUserDocumentChange = (e: { target: { value: any; }; }) => {
@@ -68,6 +84,36 @@ export const EditDocumentView = (props: EditDocumentViewProps) => {
 
   if (!socket) {
     return null;
+  }
+  if (shouldTimeout) {
+    return (
+      <>
+        <Alert
+          message="Connection timeout"
+          description={`Connection couldn't be established in ${CONNECTION_TIMEOUT} ms. `}
+          type="error"
+        />
+        <Button type="primary" block onClick={() => window.location.reload()}>Try again</Button>
+      </>
+    );
+  }
+  if (socket.state() === SocketState.CLOSED) {
+    return (
+      <Alert
+        message="Server error"
+        description="Connection to server has failed, please retry later..."
+        type="error"
+      />
+    );
+  }
+  if (socket.state() === SocketState.CONNECTING) {
+    return (
+      <Alert
+        message="Connecting"
+        description="Connecting to server. Hold on..."
+        type="info"
+      />
+    );
   }
   return (
     <>

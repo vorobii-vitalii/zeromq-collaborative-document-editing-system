@@ -1,16 +1,19 @@
 package org.example;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.OPTIONAL;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 import org.bson.Document;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +43,14 @@ import document.editing.RequestHolder;
 public class IntegrationTest {
 	private static final DockerImageName MONGO_IMAGE = DockerImageName.parse("mongo:latest");
 	private static final int MONGO_PORT = 27017;
-	private static final DockerImageName DOCUMENT_SERVER_IMAGE = DockerImageName.parse("document-editor/document-server");
+	private static final DockerImageName DOCUMENT_SERVER_IMAGE = DockerImageName.parse(getDocumentServerImageName());
+
+	@NotNull
+	private static String getDocumentServerImageName() {
+		return Optional.ofNullable(System.getProperty("documentServerImage"))
+				.orElse("document-editor/document-server");
+	}
+
 	private static final String MONGO_DB = "test";
 	private static final String DOCUMENTS_COLLECTION = "documents";
 	private static final int SERVER_PORT = 3104;

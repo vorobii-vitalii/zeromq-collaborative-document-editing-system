@@ -26,10 +26,10 @@ public class DocumentsEventsReadModule {
 	@Singleton
 	@Provides
 	@Named("documentEventServerSubscribeSocket")
-	ZMQ.Socket documentEventServerSubscribeSocket(ZContext context) {
+	ZMQ.Socket documentEventServerSubscribeSocket(ZContext context, @Named("documentEventServerURL") String documentEventServerURL) {
 		var socket = context.createSocket(SocketType.SUB);
-		LOGGER.info("Establishing connection to document event server, url = {}", getDocumentEventServer());
-		socket.connect(getDocumentEventServer());
+		LOGGER.info("Establishing connection to document event server, url = {}", documentEventServerURL);
+		socket.connect(documentEventServerURL);
 		socket.subscribe(ZMQ.SUBSCRIPTION_ALL);
 		return socket;
 	}
@@ -57,7 +57,9 @@ public class DocumentsEventsReadModule {
 		);
 	}
 
-	private static String getDocumentEventServer() {
+	@Provides
+	@Named("documentEventServerURL")
+	public String getDocumentEventServer() {
 		return System.getenv("DOCUMENT_EVENT_SERVER_URL");
 	}
 

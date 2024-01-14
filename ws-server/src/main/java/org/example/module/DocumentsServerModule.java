@@ -1,5 +1,6 @@
 package org.example.module;
 
+import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.apache.commons.pool2.BasePooledObjectFactory;
@@ -25,13 +26,18 @@ public class DocumentsServerModule {
 
 	@Singleton
 	@Provides
-	GenericObjectPool<ZMQ.Socket> documentServerConnectionPool(ZContext context) {
+	GenericObjectPool<ZMQ.Socket> documentServerConnectionPool(
+			ZContext context,
+			@Named("documentServerURL") String documentServerURL,
+			@Named("minPoolSize") int minPoolSize,
+			@Named("maxPoolSize") int maxPoolSize
+	) {
 		var pooledObjectFactory = new BasePooledObjectFactory<ZMQ.Socket>() {
 			@Override
 			public ZMQ.Socket create() {
 				var socket = context.createSocket(SocketType.REQ);
-				LOGGER.info("Establishing connection to document server, url = {}", getDocumentServerURL());
-				socket.connect(getDocumentServerURL());
+				LOGGER.info("Establishing connection to document server, url = {}", documentServerURL);
+				socket.connect(documentServerURL);
 				return socket;
 			}
 
@@ -42,8 +48,8 @@ public class DocumentsServerModule {
 		};
 
 		var genericObjectPoolConfig = new GenericObjectPoolConfig<ZMQ.Socket>();
-		genericObjectPoolConfig.setMinIdle(getMinPoolSize());
-		genericObjectPoolConfig.setMaxTotal(getMaxPoolSize());
+		genericObjectPoolConfig.setMinIdle(minPoolSize);
+		genericObjectPoolConfig.setMaxTotal(maxPoolSize);
 
 		var socketPool = new GenericObjectPool<>(pooledObjectFactory, genericObjectPoolConfig);
 		Runtime.getRuntime().addShutdownHook(new Thread(socketPool::close));
@@ -56,16 +62,22 @@ public class DocumentsServerModule {
 		return new PooledReactiveZMQServiceCaller<>(documentServerConnectionPool, new DocumentServiceCaller());
 	}
 
-	private static int getMinPoolSize() {
+	@Provides
+	@Named("documentServerURL")
+	public String getDocumentServerURL() {
+		return System.getenv("DOCUMENT_SERVER_URL");
+	}
+
+	@Provides
+	@Named("minPoolSize")
+	public int getMinPoolSize() {
 		return Integer.parseInt(System.getenv("MIN_POOL_SIZE"));
 	}
 
-	private static int getMaxPoolSize() {
+	@Provides
+	@Named("maxPoolSize")
+	public int getMaxPoolSize() {
 		return Integer.parseInt(System.getenv("MAX_POOL_SIZE"));
-	}
-
-	private static String getDocumentServerURL() {
-		return System.getenv("DOCUMENT_SERVER_URL");
 	}
 
 }

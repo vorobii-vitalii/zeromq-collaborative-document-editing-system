@@ -21,7 +21,7 @@ class TestDocumentServiceCaller {
 	DocumentServiceCaller documentServiceCaller = new DocumentServiceCaller();
 
 	@Test
-	void apply() {
+	void callGivenHappyPath() {
 		when(socket.recv()).thenReturn(RESPONSE_1, RESPONSE_2);
 		when(socket.hasReceiveMore()).thenReturn(true, false);
 		StepVerifier.create(documentServiceCaller.apply(socket, REQUEST))
@@ -34,4 +34,17 @@ class TestDocumentServiceCaller {
 		inOrder.verify(socket).send(REQUEST);
 		inOrder.verify(socket, atLeastOnce()).recv();
 	}
+
+	@Test
+	void callGivenErrorOccurredWhenReadingResponse() {
+		when(socket.recv()).thenThrow(new RuntimeException());
+		StepVerifier.create(documentServiceCaller.apply(socket, REQUEST))
+				.expectError()
+				.log()
+				.verify();
+		InOrder inOrder = Mockito.inOrder(socket);
+		inOrder.verify(socket).send(REQUEST);
+		inOrder.verify(socket, atLeastOnce()).recv();
+	}
+
 }

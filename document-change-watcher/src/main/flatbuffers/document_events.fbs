@@ -1,0 +1,12 @@
+namespace document.editing;
+
+table DocumentUpdatedEvent {
+	char_id: string;
+	parent_char_id: string;
+	is_right: bool = false;
+	disambiguator: int32 = null;
+	character: int32;
+	document_id: int32;
+}
+
+root_type DocumentUpdatedEvent;

@@ -1,0 +1,99 @@
+import io.netifi.flatbuffers.plugin.tasks.FlatBuffers
+
+plugins {
+    id 'java'
+    id "jacoco"
+    id "io.netifi.flatbuffers" version "1.0.7"
+    id "org.sonarqube" version "4.4.1.3373"
+}
+
+build.dependsOn jacocoTestReport
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+}
+
+sonar {
+    properties {
+        property "sonar.projectKey", "vorobii-vitalii_zeromq-collaborative-document-editing-system"
+        property "sonar.organization", "vorobii-vitalii"
+        property "sonar.host.url", "https://sonarcloud.io"
+        property "sonar.exclusions", "**/flatbuffers/**,**/WebSocketServer.java"
+    }
+}
+
+group 'org.example'
+
+var mainClass = "org.example.WebSocketServer"
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes "Main-Class": mainClass
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+flatbuffers {
+    flatcPath = '/home/vitaliivorobii/flatbuffers/flatc'
+    language = 'java'
+}
+
+tasks.register('createFlatBuffers', FlatBuffers) {
+    outputDir = file("src/generated/flatbuffers")
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Tests
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+    testImplementation("org.assertj:assertj-core:3.25.1")
+    testImplementation("org.mockito:mockito-core:5.8.0")
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.0'
+
+    // ZeroMQ
+    implementation("org.zeromq:jeromq:0.5.4")
+
+    // Tracing
+    implementation("co.elastic.apm:apm-agent-api:1.45.0")
+
+    // Micrometer
+    implementation("io.micrometer:micrometer-core:1.12.1")
+
+    // Logging
+    implementation("org.slf4j:slf4j-api:2.1.0-alpha0")
+    implementation("ch.qos.logback:logback-classic:1.4.14")
+    implementation("co.elastic.logging:logback-ecs-encoder:1.5.0")
+
+    // Dependency injection
+    implementation("com.google.dagger:dagger:2.50")
+    annotationProcessor("com.google.dagger:dagger-compiler:2.50")
+
+    // FlatBuffers
+    implementation("com.google.flatbuffers:flatbuffers-java:23.5.26")
+
+    // Reactor Netty
+    implementation("io.projectreactor.netty:reactor-netty:1.1.14")
+    testImplementation("io.projectreactor:reactor-test:3.6.2")
+
+    // Pooling
+    implementation("org.apache.commons:commons-pool2:2.12.0")
+    implementation("io.projectreactor.addons:reactor-pool:1.0.4")
+
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        showStandardStreams = true
+    }
+}

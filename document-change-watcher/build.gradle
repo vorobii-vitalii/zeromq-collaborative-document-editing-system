@@ -1,0 +1,95 @@
+import io.netifi.flatbuffers.plugin.tasks.FlatBuffers
+
+plugins {
+    id 'java'
+    id "io.netifi.flatbuffers" version "1.0.7"
+    id "org.sonarqube" version "4.4.1.3373"
+    id "jacoco"
+}
+
+build.dependsOn jacocoTestReport
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+}
+
+sonar {
+    properties {
+        property "sonar.projectKey", "vorobii-vitalii_zeromq-collaborative-document-editing-system"
+        property "sonar.organization", "vorobii-vitalii"
+        property "sonar.host.url", "https://sonarcloud.io"
+        property "sonar.exclusions", "**/flatbuffers/**"
+    }
+}
+
+group 'org.example'
+
+var mainClass = "org.example.DocumentWatcher"
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes "Main-Class": mainClass
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+flatbuffers {
+    flatcPath = '/home/vitaliivorobii/flatbuffers/flatc'
+    language = 'java'
+}
+
+tasks.register('createFlatBuffers', FlatBuffers) {
+    outputDir = file("src/generated/flatbuffers")
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Tests
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+    testImplementation("org.assertj:assertj-core:3.25.1")
+    testImplementation("org.mockito:mockito-core:5.8.0")
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.0'
+
+    // Integration tests libraries
+    testImplementation "org.testcontainers:testcontainers:1.19.3"
+    testImplementation "org.testcontainers:junit-jupiter:1.19.3"
+    testImplementation "org.testcontainers:mongodb:1.19.3"
+
+    // ZeroMQ
+    implementation("org.zeromq:jeromq:0.5.4")
+
+    // Logging
+    implementation("org.slf4j:slf4j-api:2.1.0-alpha0")
+    implementation("ch.qos.logback:logback-classic:1.4.14")
+
+    // Dependency injection
+    implementation("com.google.dagger:dagger:2.50")
+    annotationProcessor("com.google.dagger:dagger-compiler:2.50")
+
+    // Micrometer
+    implementation("io.micrometer:micrometer-core:1.12.1")
+
+    // MongoDB Driver
+    implementation("org.mongodb:mongodb-driver-sync:4.11.1")
+
+    // FlatBuffers
+    implementation("com.google.flatbuffers:flatbuffers-java:23.5.26")
+}
+
+test {
+    useJUnitPlatform()
+    exclude '**/**Integration**'
+    testLogging {
+        showStandardStreams = true
+    }
+}

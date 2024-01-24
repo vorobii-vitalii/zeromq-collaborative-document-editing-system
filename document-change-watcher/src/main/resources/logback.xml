@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern><![CDATA[%date{HH:mm:ss.SSS} [%thread] %-5level %logger{15}#%line traceId: %X{trace_id} spanId: %X{span_id} %msg\n]]></pattern>
+		</encoder>
+	</appender>
+
+	<appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+		<appender-ref ref="STDOUT"/>
+	</appender>
+
+	<root>
+		<level value="INFO" />
+		<appender-ref ref="ASYNC_CONSOLE" />
+	</root>
+
+</configuration>

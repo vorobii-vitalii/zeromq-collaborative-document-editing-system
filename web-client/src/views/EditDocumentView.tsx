@@ -27,9 +27,7 @@ export const EditDocumentView = (props: EditDocumentViewProps) => {
 
   useEffect(() => {
     setTimeout(() => {
-      if (socket?.state() !== SocketState.OPEN) {
-        setShouldTimeout(true);
-      }
+      // TODO: Check if still not connected
     }, CONNECTION_TIMEOUT)
   }, [socket]);
 
@@ -97,24 +95,24 @@ export const EditDocumentView = (props: EditDocumentViewProps) => {
       </>
     );
   }
-  if (socket.state() === SocketState.CLOSED) {
-    return (
-      <Alert
-        message="Server error"
-        description="Connection to server has failed, please retry later..."
-        type="error"
-      />
-    );
-  }
-  if (socket.state() === SocketState.CONNECTING) {
-    return (
-      <Alert
-        message="Connecting"
-        description="Connecting to server. Hold on..."
-        type="info"
-      />
-    );
-  }
+  // if (socket.state() === SocketState.CLOSED) {
+  //   return (
+  //     <Alert
+  //       message="Server error"
+  //       description="Connection to server has failed, please retry later..."
+  //       type="error"
+  //     />
+  //   );
+  // }
+  // if (socket.state() === SocketState.CONNECTING) {
+  //   return (
+  //     <Alert
+  //       message="Connecting"
+  //       description="Connecting to server. Hold on..."
+  //       type="info"
+  //     />
+  //   );
+  // }
   return (
     <>
       <Typography.Title>Welcome {userId}! You are editing document {documentId}!</Typography.Title>

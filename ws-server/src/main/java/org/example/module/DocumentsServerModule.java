@@ -3,19 +3,15 @@ package org.example.module;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.apache.commons.pool2.BasePooledObjectFactory;
-import org.apache.commons.pool2.PooledObject;
-import org.apache.commons.pool2.impl.DefaultPooledObject;
-import org.apache.commons.pool2.impl.GenericObjectPool;
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
-import org.example.server.impl.DocumentServiceCaller;
-import org.example.server.impl.PooledReactiveZMQServiceCaller;
+import org.example.constants.ServerConstants;
+import org.example.process.ProtocolSwitchProcess;
 import org.example.server.ServiceCaller;
+import org.example.server.impl.DocumentServiceCaller;
+import org.example.server.impl.ZMQServiceCaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
 
 import dagger.Module;
 import dagger.Provides;
@@ -24,42 +20,27 @@ import dagger.Provides;
 public class DocumentsServerModule {
 	private static final Logger LOGGER = LoggerFactory.getLogger(DocumentsServerModule.class);
 
-	@Singleton
 	@Provides
-	GenericObjectPool<ZMQ.Socket> documentServerConnectionPool(
-			ZContext context,
+	ProtocolSwitchProcess protocolSwitchProcess(
 			@Named("documentServerURL") String documentServerURL,
-			@Named("minPoolSize") int minPoolSize,
-			@Named("maxPoolSize") int maxPoolSize
+			ZContext context
 	) {
-		var pooledObjectFactory = new BasePooledObjectFactory<ZMQ.Socket>() {
-			@Override
-			public ZMQ.Socket create() {
-				var socket = context.createSocket(SocketType.REQ);
-				LOGGER.info("Establishing connection to document server, url = {}", documentServerURL);
-				socket.connect(documentServerURL);
-				return socket;
-			}
-
-			@Override
-			public PooledObject<ZMQ.Socket> wrap(ZMQ.Socket obj) {
-				return new DefaultPooledObject<>(obj);
-			}
-		};
-
-		var genericObjectPoolConfig = new GenericObjectPoolConfig<ZMQ.Socket>();
-		genericObjectPoolConfig.setMinIdle(minPoolSize);
-		genericObjectPoolConfig.setMaxTotal(maxPoolSize);
-
-		var socketPool = new GenericObjectPool<>(pooledObjectFactory, genericObjectPoolConfig);
-		Runtime.getRuntime().addShutdownHook(new Thread(socketPool::close));
-		return socketPool;
+		var routerSocket = context.createSocket(SocketType.ROUTER);
+		routerSocket.bind(ServerConstants.REQUESTS_INPROC_SOCKET);
+		var dealerSocket = context.createSocket(SocketType.DEALER);
+		dealerSocket.connect(documentServerURL);
+		LOGGER.info("Creating protocol switcher from {} to {}", ServerConstants.REQUESTS_INPROC_SOCKET, documentServerURL);
+		return new ProtocolSwitchProcess(routerSocket, dealerSocket);
 	}
 
 	@Singleton
 	@Provides
-	ServiceCaller<byte[]> documentServerCaller(GenericObjectPool<ZMQ.Socket> documentServerConnectionPool) {
-		return new PooledReactiveZMQServiceCaller<>(documentServerConnectionPool, new DocumentServiceCaller());
+	ServiceCaller<byte[]> documentServerCaller(ZContext context) {
+		return new ZMQServiceCaller<>(() -> {
+			var socket = context.createSocket(SocketType.REQ);
+			socket.connect(ServerConstants.REQUESTS_INPROC_SOCKET);
+			return socket;
+		}, new DocumentServiceCaller());
 	}
 
 	@Provides

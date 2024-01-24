@@ -4,6 +4,7 @@ import javax.inject.Singleton;
 
 import org.example.module.WebSocketServerModule;
 import org.example.process.DocumentEventsReadProcess;
+import org.example.process.ProtocolSwitchProcess;
 
 import dagger.Component;
 import reactor.netty.http.server.HttpServer;
@@ -15,4 +16,5 @@ import reactor.netty.http.server.HttpServer;
 public interface WSServerComponent {
 	HttpServer webSocketServer();
 	DocumentEventsReadProcess documentEventsReadProcess();
+	ProtocolSwitchProcess protocolSwitchProcess();
 }

@@ -16,7 +16,6 @@ node "document-change-watcher"
 ' Inter-service interactions
 
 "web-client" --> "ws-server": Establish WS connection to /documents/{documentId}
-
 "ws-server" --> "document-server" : Replicates all get/update requests/responses to/from server
 "ws-server" --> "document-change-watcher" : Subscribes to updates to the document, replicates all updates to client
 "document-change-watcher" --> "ws-server" : Replicates all updates from Mongo
